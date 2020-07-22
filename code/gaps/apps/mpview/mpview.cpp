@@ -10,7 +10,7 @@
 #include "RGBD/RGBD.h"
 #include "fglut/fglut.h"
 #include "mp.h"
-
+#include <png/png.h>
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -30,6 +30,7 @@ static char *input_ssa_filename = NULL;
 static char *input_ssb_filename = NULL;
 static char *output_house_filename = NULL;
 static char *output_image_filename = NULL;
+static char* output_images_path = NULL;
 static R3Vector initial_camera_towards(0, 0, -1);
 static R3Vector initial_camera_up(0,1,0);
 static R3Point initial_camera_origin(0,0,0);
@@ -54,7 +55,7 @@ static int snap_image_index = -1;
 
 static RNFlags level_draw_flags = MP_DRAW_DEPICTIONS;
 static RNFlags region_draw_flags = MP_DRAW_FACES | MP_DRAW_DEPICTIONS;
-static RNFlags object_draw_flags = MP_SHOW_OBJECTS | MP_SHOW_SEGMENTS | MP_DRAW_BBOXES;
+static RNFlags object_draw_flags = MP_SHOW_OBJECTS | MP_SHOW_SEGMENTS; // | MP_DRAW_BBOXES;
 static RNFlags image_draw_flags = MP_DRAW_DEPICTIONS;
 static RNFlags panorama_draw_flags = MP_DRAW_DEPICTIONS;
 static RNFlags mesh_draw_flags = MP_DRAW_VERTICES;
@@ -104,6 +105,7 @@ PrintUsage(void)
   printf("  -window <width> <height> : window size in pixels\n");
   printf("  -camera <ex> <ey> <ez> <tx> <ty> <tz> <ux> <uy> <uz> : initial camera extrinsics\n");
   printf("  -batch : exit without starting interactive viewer\n");
+  printf("  -write_images <output folder> : writes out images of the house, real, synthetic image and segmentation.\n");
   printf("  -v : print verbose (recommended)\n");
   printf("\n");
   printf("Typical usage for viewing house segmentations:\n");
@@ -734,105 +736,109 @@ void GLUTStop(void)
 
 
 
+void Draw(void)
+{
+    // Clear window 
+    glClearColor(background.R(), background.G(), background.B(), 1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Set backface culling
+    if (show_backfacing) glDisable(GL_CULL_FACE);
+    else glEnable(GL_CULL_FACE);
+
+    // Set viewing transformation
+    if (snap_image) {
+        // Set viewport
+        glViewport(0, 0, snap_image->width / 2, snap_image->height / 2);
+
+        // Set perspective transformation
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        snap_image->rgbd.ProjectionMatrix().Load();
+
+        // Set modelview transformation
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        snap_image->extrinsics.Load();
+    }
+    else {
+        viewer->Load();
+    }
+
+    // Set lights
+    static GLfloat light1_position[] = { 3.0, 4.0, 5.0, 0.0 };
+    glLightfv(GL_LIGHT1, GL_POSITION, light1_position);
+    static GLfloat light2_position[] = { -3.0, -2.0, -3.0, 0.0 };
+    glLightfv(GL_LIGHT2, GL_POSITION, light2_position);
+
+    // Set clip planes
+    LoadClipPlanes();
+
+    // Draw selected image
+    if (selected_image) {
+        glDisable(GL_LIGHTING);
+        glColor3d(1.0, 1.0, 0.0);
+        glLineWidth(3.0);
+        selected_image->DrawCamera();
+        glLineWidth(1.0);
+        selected_image->Draw(MP_SHOW_IMAGES | image_draw_flags | MP_COLOR_BY_RGB);
+    }
+
+    // Draw selected region
+    if (selected_region) {
+        glDisable(GL_LIGHTING);
+        glColor3d(1.0, 1.0, 0.0);
+        glLineWidth(3.0);
+        selected_region->DrawSurfaces(MP_SHOW_SURFACES | MP_DRAW_EDGES);
+        glLineWidth(1.0);
+    }
+
+    // Draw selected object
+    if (selected_object) {
+        glDisable(GL_LIGHTING);
+        glColor3d(1.0, 1.0, 0.0);
+        glLineWidth(3.0);
+        selected_object->DrawBBox(MP_DRAW_EDGES);
+        glLineWidth(1.0);
+    }
+
+    // Draw house elements
+    glColor3d(0.5, 0.5, 0.5);
+    if (image_draw_flags[MP_SHOW_IMAGES]) house->DrawImages(MP_SHOW_IMAGES | MP_DRAW_DEPICTIONS | color_scheme);
+    if (panorama_draw_flags[MP_SHOW_PANORAMAS]) house->DrawPanoramas(panorama_draw_flags | color_scheme);
+    if (region_draw_flags[MP_SHOW_REGIONS]) house->DrawRegions(region_draw_flags | color_scheme);
+    if (level_draw_flags[MP_SHOW_LEVELS]) house->DrawLevels(level_draw_flags | color_scheme);
+    if (object_draw_flags[MP_SHOW_OBJECTS]) house->DrawObjects(object_draw_flags | color_scheme);
+    if (scene_draw_flags[MP_SHOW_SCENE]) house->DrawScene(scene_draw_flags | color_scheme);
+    if (mesh_draw_flags[MP_SHOW_MESH]) house->DrawMesh(mesh_draw_flags | color_scheme);
+
+    // Draw clip box
+    if (show_clip_box) {
+        glDisable(GL_LIGHTING);
+        glColor3d(0.4, 0.4, 0.4);
+        clip_box.Outline();
+    }
+
+    // Draw axes
+    if (show_axes) {
+        glDisable(GL_LIGHTING);
+        glLineWidth(3);
+        DrawAxes();
+        glLineWidth(1);
+    }
+
+    // Capture image and exit
+    if (output_image_filename) {
+        R2Image image(GLUTwindow_width, GLUTwindow_height, 3);
+        image.Capture();
+        image.Write(output_image_filename);
+        if (batch) GLUTStop();
+    }
+
+}
 void GLUTRedraw(void)
 {
-  // Clear window 
-  glClearColor(background.R(), background.G(), background.B(), 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  
-  // Set backface culling
-  if (show_backfacing) glDisable(GL_CULL_FACE);
-  else glEnable(GL_CULL_FACE);
-
-  // Set viewing transformation
-  if (snap_image) {
-    // Set viewport
-    glViewport(0, 0, snap_image->width/2, snap_image->height/2);
-    
-    // Set perspective transformation
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    snap_image->rgbd.ProjectionMatrix().Load();
-
-    // Set modelview transformation
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    snap_image->extrinsics.Load();
-  }
-  else {
-    viewer->Load();
-  }
-
-  // Set lights
-  static GLfloat light1_position[] = { 3.0, 4.0, 5.0, 0.0 };
-  glLightfv(GL_LIGHT1, GL_POSITION, light1_position);
-  static GLfloat light2_position[] = { -3.0, -2.0, -3.0, 0.0 };
-  glLightfv(GL_LIGHT2, GL_POSITION, light2_position);
-
-  // Set clip planes
-  LoadClipPlanes();
-
-  // Draw selected image
-  if (selected_image) {
-    glDisable(GL_LIGHTING);
-    glColor3d(1.0, 1.0, 0.0);
-    glLineWidth(3.0);
-    selected_image->DrawCamera();
-    glLineWidth(1.0);
-    selected_image->Draw(MP_SHOW_IMAGES | image_draw_flags | MP_COLOR_BY_RGB);
-  }
-
-  // Draw selected region
-  if (selected_region) {
-    glDisable(GL_LIGHTING);
-    glColor3d(1.0, 1.0, 0.0);
-    glLineWidth(3.0);
-    selected_region->DrawSurfaces(MP_SHOW_SURFACES | MP_DRAW_EDGES);
-    glLineWidth(1.0);
-  }
-
-  // Draw selected object
-  if (selected_object) {
-    glDisable(GL_LIGHTING);
-    glColor3d(1.0, 1.0, 0.0);
-    glLineWidth(3.0);
-    selected_object->DrawBBox(MP_DRAW_EDGES);
-    glLineWidth(1.0);
-  }
-
-  // Draw house elements
-  glColor3d(0.5, 0.5, 0.5);
-  if (image_draw_flags[MP_SHOW_IMAGES]) house->DrawImages(MP_SHOW_IMAGES | MP_DRAW_DEPICTIONS | color_scheme);
-  if (panorama_draw_flags[MP_SHOW_PANORAMAS]) house->DrawPanoramas(panorama_draw_flags | color_scheme);
-  if (region_draw_flags[MP_SHOW_REGIONS]) house->DrawRegions(region_draw_flags | color_scheme);
-  if (level_draw_flags[MP_SHOW_LEVELS]) house->DrawLevels(level_draw_flags | color_scheme);
-  if (object_draw_flags[MP_SHOW_OBJECTS]) house->DrawObjects(object_draw_flags | color_scheme);
-  if (scene_draw_flags[MP_SHOW_SCENE]) house->DrawScene(scene_draw_flags | color_scheme);
-  if (mesh_draw_flags[MP_SHOW_MESH]) house->DrawMesh(mesh_draw_flags | color_scheme);
-
-  // Draw clip box
-  if (show_clip_box) {
-    glDisable(GL_LIGHTING);
-    glColor3d(0.4, 0.4, 0.4);
-    clip_box.Outline();
-  }
-  
-  // Draw axes
-  if (show_axes) {
-    glDisable(GL_LIGHTING);
-    glLineWidth(3);
-    DrawAxes();
-    glLineWidth(1);
-  }
-
-  // Capture image and exit
-  if (output_image_filename) {
-    R2Image image(GLUTwindow_width, GLUTwindow_height, 3);
-    image.Capture();
-    image.Write(output_image_filename);
-    if (batch) GLUTStop();
-  }
-
+    Draw();
   // Swap buffers 
   glutSwapBuffers();
 }    
@@ -1072,7 +1078,7 @@ void GLUTKeyboard(unsigned char key, int x, int y)
   case 'f': 
     region_draw_flags.XOR(MP_DRAW_FACES);
     object_draw_flags.XOR(MP_DRAW_FACES);
-    scene_draw_flags.XOR(MP_DRAW_FACES);
+    //scene_draw_flags.XOR(MP_DRAW_FACES);
     mesh_draw_flags.XOR(MP_DRAW_FACES);
     break;
 
@@ -1119,9 +1125,9 @@ void GLUTKeyboard(unsigned char key, int x, int y)
 
   case 'V': 
   case 'v':
-    region_draw_flags.XOR(MP_DRAW_VERTICES);
-    image_draw_flags.XOR(MP_DRAW_VERTICES);
-    object_draw_flags.XOR(MP_DRAW_VERTICES);
+    //region_draw_flags.XOR(MP_DRAW_VERTICES);
+    //image_draw_flags.XOR(MP_DRAW_VERTICES);
+    //object_draw_flags.XOR(MP_DRAW_VERTICES);
     mesh_draw_flags.XOR(MP_DRAW_VERTICES);
     break;
 
@@ -1129,6 +1135,13 @@ void GLUTKeyboard(unsigned char key, int x, int y)
   case 'x':
     show_clip_box = !show_clip_box;
     break;
+
+  case 'Q':
+  case 'q':
+      region_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      object_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      mesh_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      break;
 
   case ' ':
     if (color_scheme == MP_COLOR_BY_RGB)
@@ -1269,6 +1282,7 @@ ParseArgs(int argc, char **argv)
       else if (!strcmp(*argv, "-input_segments")) { argc--; argv++; input_segments_filename = *argv; }
       else if (!strcmp(*argv, "-input_objects")) { argc--; argv++; input_objects_filename = *argv; }
       else if (!strcmp(*argv, "-input_configuration")) { argc--; argv++; input_configuration_filename = *argv; input = TRUE; }
+      else if (!strcmp(*argv, "-write_images")) { argc--; argv++; output_images_path = *argv; }
       else if (!strcmp(*argv, "-background")) {
         argv++; argc--; background[0] = atof(*argv);
         argv++; argc--; background[1] = atof(*argv);
@@ -1323,6 +1337,191 @@ ParseArgs(int argc, char **argv)
 
   // Return OK status 
   return 1;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// Main function
+////////////////////////////////////////////////////////////////////////
+
+void batchWriteImages()
+{
+    std::string output_path(output_images_path);
+    printf("Write output images to %s\n", output_images_path);
+    if (*output_path.rbegin() != '/' || *output_path.rbegin() != '\\') {
+        output_path += "\\";
+    }
+
+    //init from GLUTMainLoop
+    if (house->bbox.IsEmpty()) return;
+
+    // Initialize viewing stuff
+    center = house->bbox.Centroid();
+    clip_box = house->bbox;
+
+    // Setup camera view looking down the Z axis
+    assert(!house->bbox.IsEmpty());
+    RNLength r = house->bbox.DiagonalRadius();
+    assert((r > 0.0) && RNIsFinite(r));
+    if (!initial_camera) initial_camera_origin = house->bbox.Centroid() - initial_camera_towards * (2.5 * r);
+    R3Camera camera(initial_camera_origin, initial_camera_towards, initial_camera_up, 0.54, 0.45, 0.01 * r, 100.0 * r);
+    R2Viewport viewport(0, 0, GLUTwindow_width, GLUTwindow_height);
+    viewer = new R3Viewer(camera, viewport);
+	
+    //prepare settings
+    color_scheme = MP_COLOR_BY_OBJECT | MP_COLOR_BY_LABEL;
+    region_draw_flags.Add(MP_COLOR_FOR_PICK);
+    object_draw_flags.Add(MP_COLOR_FOR_PICK);
+    mesh_draw_flags.Add(MP_COLOR_FOR_PICK);
+    show_clip_box = false;
+    show_axes = false;
+
+    GLint viewport2[4];
+    glGetIntegerv(GL_VIEWPORT, viewport2);
+    R2Image image(viewport2[2], viewport2[3], 3);
+    std::vector<char> output_filename(output_path.length() + 50);
+
+    //create category information
+    struct CategoryData
+    {
+        int index;
+        RNRgb color;
+        const char* name;
+    };
+    int maxIndex = 0;
+    std::map<int, CategoryData> indexToCategory;
+    std::vector<CategoryData> categories;
+    indexToCategory[0] = CategoryData{ 0, {0,0,0}, "unlabelled" };
+    for (int i = 0; i < house->categories.NEntries(); ++i)
+    {
+        int index = house->categories[i]->mpcat40_id;
+        RNRgb color = GetColor(index);
+        const char* name = house->categories[i]->mpcat40_name;
+        if (indexToCategory.count(index) == 0) {
+            indexToCategory[index] = { index, color, name };
+            categories.push_back(CategoryData{ index, color, name });
+        }
+        maxIndex = max(maxIndex, index);
+    }
+
+    //write category information
+    sprintf_s(&output_filename[0], output_filename.size(),
+        "%scategories.tsv", output_path.c_str());
+    FILE* cat_file = fopen(output_filename.data(), "w");
+    fprintf(cat_file, "Index\tcat40-name\tcolor\n");
+    for (int i = 0; i <= maxIndex; ++i) {
+        const auto& d = indexToCategory[i];
+        int r = max(0, min(255, int(round(d.color.R() * 255))));
+        int g = max(0, min(255, int(round(d.color.G() * 255))));
+        int b = max(0, min(255, int(round(d.color.B() * 255))));
+        fprintf(cat_file, "%d\t%s\t#%02x%02x%02x\n",
+            d.index, d.name, r, g, b);
+    }
+    fclose(cat_file);
+	
+	//loop over images
+	for (snap_image_index=0; snap_image_index<house->images.NEntries(); ++snap_image_index)
+	{
+        printf("\r%3d / %3d", (snap_image_index + 1), house->images.NEntries());
+        fflush(stdout);
+        SnapImage(house->images.Kth(snap_image_index));
+
+		//render real image
+        image_draw_flags.Add(MP_DRAW_IMAGES);
+        Draw();
+        image.Capture();
+        sprintf_s(&output_filename[0], output_filename.size(),
+            "%sreal_%05d.png", output_path.c_str(), snap_image_index);
+        image.Write(output_filename.data());
+        image_draw_flags.Remove(MP_DRAW_IMAGES);
+
+		//render virtual image
+        scene_draw_flags.Add(MP_SHOW_SCENE);
+        Draw();
+        image.Capture();
+        sprintf_s(&output_filename[0], output_filename.size(),
+            "%ssynth_%05d.png", output_path.c_str(), snap_image_index);
+        image.Write(output_filename.data());
+        scene_draw_flags.Remove(MP_SHOW_SCENE);
+
+		//render segmentation
+        region_draw_flags.Add(MP_DRAW_FACES);
+        object_draw_flags.Add(MP_DRAW_FACES);
+        mesh_draw_flags.Add(MP_DRAW_FACES);
+
+        Draw();
+        image.Capture();
+        sprintf_s(&output_filename[0], output_filename.size(),
+            "%sclasses_%05d.png", output_path.c_str(), snap_image_index);
+#if 0 // no palette
+        image.Write(output_filename.data());
+#else // with palette
+        {
+            unsigned paletteSize = maxIndex + 1;
+            assert(paletteSize <= PNG_MAX_PALETTE_LENGTH);
+            FILE* fp = fopen(output_filename.data(), "wb");
+            png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+            png_infop info_ptr = png_create_info_struct(png_ptr);
+            png_set_IHDR(png_ptr, info_ptr, image.Width(), image.Height(),
+                8, PNG_COLOR_TYPE_PALETTE, PNG_INTERLACE_NONE,
+                PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+            png_color* palette = (png_color*)png_malloc(png_ptr, paletteSize * sizeof(png_color));
+            for (unsigned p = 0; p < paletteSize; p++)
+            {
+                png_color* col = &palette[p];
+                const auto& d = indexToCategory[p];
+                int r = max(0, min(255, int(round(d.color.R() * 255))));
+                int g = max(0, min(255, int(round(d.color.G() * 255))));
+                int b = max(0, min(255, int(round(d.color.B() * 255))));
+                col->red = r;
+                col->green = g;
+                col->blue = b;
+            }
+            png_set_PLTE(png_ptr, info_ptr, palette, paletteSize);
+            png_init_io(png_ptr, fp);
+            png_write_info(png_ptr, info_ptr);
+            std::vector<unsigned char> pixels(image.Width()* image.Height(), 0);
+            int matchingErrors = 0;
+        	for (int y=0; y<image.Height(); ++y)
+                for (int x=0; x<image.Width(); ++x)
+                {
+                    auto col1 = image.PixelRGB(x, y);
+                	//search for matching color
+                    static double EPSILON = 2.0 / 255.0;
+                    int index = -1;
+                	for (const auto& cat : categories)
+                	{
+                		if (abs(cat.color.R() - col1.R())<=EPSILON &&
+                            abs(cat.color.G() - col1.G()) <= EPSILON &&
+                            abs(cat.color.B() - col1.B()) <= EPSILON)
+                		{
+                            index = cat.index;
+                            break;
+                		}
+                	}
+                	if (index==-1)
+                	{
+                        matchingErrors++;
+                        index = 0;
+                	}
+                    pixels[x + image.Width() * y] = static_cast<unsigned char>(index);
+                }
+            png_bytep* row_pointers = (png_bytep*)png_malloc(png_ptr, image.Height() * png_sizeof(png_bytep));
+            for (int i = 0; i < image.Height(); i++) 
+                row_pointers[i] = &pixels[(image.Height() - i - 1) * image.Width()];
+            png_write_image(png_ptr, row_pointers);
+            png_write_end(png_ptr, info_ptr);
+            png_free(png_ptr, palette);
+            png_destroy_write_struct(&png_ptr, &info_ptr);
+            fclose(fp);
+        }
+#endif
+		
+        region_draw_flags.Remove(MP_DRAW_FACES);
+        object_draw_flags.Remove(MP_DRAW_FACES);
+        mesh_draw_flags.Remove(MP_DRAW_FACES);
+	}
+    printf("\n");
 }
 
 
@@ -1383,6 +1582,12 @@ int main(int argc, char **argv)
     if (!WriteHouse(output_house_filename)) exit(-1);
   }
 
+  if (output_images_path)
+  {
+    GLUTInit(&argc, argv);
+    batchWriteImages();
+  }
+	
   // Check if should start interactive viewer
   if (!batch || output_image_filename) {
     // Initialize GLUT

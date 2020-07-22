@@ -153,7 +153,7 @@ SetName(const char *name)
 {
   // Set name
   if (this->name) free(this->name);
-  if (name) this->name = strdup(name);
+  if (name) this->name = _strdup(name);
   else this->name = NULL;
 }
 

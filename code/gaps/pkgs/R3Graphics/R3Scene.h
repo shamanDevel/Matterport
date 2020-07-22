@@ -429,7 +429,7 @@ SetFilename(const char *filename)
 {
   // Set filename
   if (this->filename) free(this->filename);
-  if (filename) this->filename = strdup(filename);
+  if (filename) this->filename = _strdup(filename);
   else this->filename = NULL;
 }
 

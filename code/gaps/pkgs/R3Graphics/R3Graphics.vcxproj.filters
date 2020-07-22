@@ -56,10 +56,10 @@
     <ClCompile Include="R3SceneReference.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="p5d.cpp">
+    <ClCompile Include="R3AreaLight.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="json.cpp">
+    <ClCompile Include="R3Frustum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -95,9 +95,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="R3SpotLight.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="R3Viewer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="R3SceneNode.h">

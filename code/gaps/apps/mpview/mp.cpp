@@ -60,43 +60,46 @@ LoadIndex(int index, int tag)
 }
 
 
+RNRgb GetColor(int k)
+{
+    // Make array of colors
+    static const int ncolors = 72;
+    static const RNRgb colors[ncolors] = {
+      RNRgb(0.5, 0.5, 0.5), RNRgb(1, 0, 0), RNRgb(0, 0, 1),
+      RNRgb(0, 1, 0), RNRgb(0, 1, 1), RNRgb(1, 0, 1),
+      RNRgb(1, 0.5, 0), RNRgb(0, 1, 0.5), RNRgb(0.5, 0, 1),
+      RNRgb(0.5, 1, 0), RNRgb(0, 0.5, 1), RNRgb(1, 0, 0.5),
+      RNRgb(0.5, 0, 0), RNRgb(0, 0.5, 0), RNRgb(0, 0, 0.5),
+      RNRgb(0.5, 0.5, 0), RNRgb(0, 0.5, 0.5), RNRgb(0.5, 0, 0.5),
+      RNRgb(0.7, 0, 0), RNRgb(0, 0.7, 0), RNRgb(0, 0, 0.7),
+      RNRgb(0.7, 0.7, 0), RNRgb(0, 0.7, 0.7), RNRgb(0.7, 0, 0.7),
+      RNRgb(0.7, 0.3, 0), RNRgb(0, 0.7, 0.3), RNRgb(0.3, 0, 0.7),
+      RNRgb(0.3, 0.7, 0), RNRgb(0, 0.3, 0.7), RNRgb(0.7, 0, 0.3),
+      RNRgb(0.3, 0, 0), RNRgb(0, 0.3, 0), RNRgb(0, 0, 0.3),
+      RNRgb(0.3, 0.3, 0), RNRgb(0, 0.3, 0.3), RNRgb(0.3, 0, 0.3),
+      RNRgb(1, 0.3, 0.3), RNRgb(0.3, 1, 0.3), RNRgb(0.3, 0.3, 1),
+      RNRgb(1, 1, 0.3), RNRgb(0.3, 1, 1), RNRgb(1, 0.3, 1),
+      RNRgb(1, 0.5, 0.3), RNRgb(0.3, 1, 0.5), RNRgb(0.5, 0.3, 1),
+      RNRgb(0.5, 1, 0.3), RNRgb(0.3, 0.5, 1), RNRgb(1, 0.3, 0.5),
+      RNRgb(0.5, 0.3, 0.3), RNRgb(0.3, 0.5, 0.3), RNRgb(0.3, 0.3, 0.5),
+      RNRgb(0.5, 0.5, 0.3), RNRgb(0.3, 0.5, 0.5), RNRgb(0.5, 0.3, 0.5),
+      RNRgb(0.3, 0.5, 0.5), RNRgb(0.5, 0.3, 0.5), RNRgb(0.5, 0.5, 0.3),
+      RNRgb(0.3, 0.3, 0.5), RNRgb(0.5, 0.3, 0.3), RNRgb(0.3, 0.5, 0.3),
+      RNRgb(0.3, 0.8, 0.5), RNRgb(0.5, 0.3, 0.8), RNRgb(0.8, 0.5, 0.3),
+      RNRgb(0.8, 0.3, 0.5), RNRgb(0.5, 0.8, 0.3), RNRgb(0.3, 0.5, 0.8),
+      RNRgb(0.8, 0.5, 0.5), RNRgb(0.5, 0.8, 0.5), RNRgb(0.5, 0.5, 0.8),
+      RNRgb(0.8, 0.8, 0.5), RNRgb(0.5, 0.8, 0.8), RNRgb(0.8, 0.5, 0.8)
+    };
+
+    if (k == -1) return RNRgb(0.8, 0.8, 0.8);
+    else if (k == 0) return colors[0];
+    else return colors[1 + (k % (ncolors - 1))];
+}
 
 static void
 LoadColor(int k)
 {
-  // Make array of colors
-  const int ncolors = 72;
-  const RNRgb colors[ncolors] = {
-    RNRgb(0.5, 0.5, 0.5), RNRgb(1, 0, 0), RNRgb(0, 0, 1), 
-    RNRgb(0, 1, 0), RNRgb(0, 1, 1), RNRgb(1, 0, 1), 
-    RNRgb(1, 0.5, 0), RNRgb(0, 1, 0.5), RNRgb(0.5, 0, 1), 
-    RNRgb(0.5, 1, 0), RNRgb(0, 0.5, 1), RNRgb(1, 0, 0.5), 
-    RNRgb(0.5, 0, 0), RNRgb(0, 0.5, 0), RNRgb(0, 0, 0.5), 
-    RNRgb(0.5, 0.5, 0), RNRgb(0, 0.5, 0.5), RNRgb(0.5, 0, 0.5),
-    RNRgb(0.7, 0, 0), RNRgb(0, 0.7, 0), RNRgb(0, 0, 0.7), 
-    RNRgb(0.7, 0.7, 0), RNRgb(0, 0.7, 0.7), RNRgb(0.7, 0, 0.7), 
-    RNRgb(0.7, 0.3, 0), RNRgb(0, 0.7, 0.3), RNRgb(0.3, 0, 0.7), 
-    RNRgb(0.3, 0.7, 0), RNRgb(0, 0.3, 0.7), RNRgb(0.7, 0, 0.3), 
-    RNRgb(0.3, 0, 0), RNRgb(0, 0.3, 0), RNRgb(0, 0, 0.3), 
-    RNRgb(0.3, 0.3, 0), RNRgb(0, 0.3, 0.3), RNRgb(0.3, 0, 0.3),
-    RNRgb(1, 0.3, 0.3), RNRgb(0.3, 1, 0.3), RNRgb(0.3, 0.3, 1), 
-    RNRgb(1, 1, 0.3), RNRgb(0.3, 1, 1), RNRgb(1, 0.3, 1), 
-    RNRgb(1, 0.5, 0.3), RNRgb(0.3, 1, 0.5), RNRgb(0.5, 0.3, 1), 
-    RNRgb(0.5, 1, 0.3), RNRgb(0.3, 0.5, 1), RNRgb(1, 0.3, 0.5), 
-    RNRgb(0.5, 0.3, 0.3), RNRgb(0.3, 0.5, 0.3), RNRgb(0.3, 0.3, 0.5), 
-    RNRgb(0.5, 0.5, 0.3), RNRgb(0.3, 0.5, 0.5), RNRgb(0.5, 0.3, 0.5),
-    RNRgb(0.3, 0.5, 0.5), RNRgb(0.5, 0.3, 0.5), RNRgb(0.5, 0.5, 0.3), 
-    RNRgb(0.3, 0.3, 0.5), RNRgb(0.5, 0.3, 0.3), RNRgb(0.3, 0.5, 0.3), 
-    RNRgb(0.3, 0.8, 0.5), RNRgb(0.5, 0.3, 0.8), RNRgb(0.8, 0.5, 0.3), 
-    RNRgb(0.8, 0.3, 0.5), RNRgb(0.5, 0.8, 0.3), RNRgb(0.3, 0.5, 0.8), 
-    RNRgb(0.8, 0.5, 0.5), RNRgb(0.5, 0.8, 0.5), RNRgb(0.5, 0.5, 0.8), 
-    RNRgb(0.8, 0.8, 0.5), RNRgb(0.5, 0.8, 0.8), RNRgb(0.8, 0.5, 0.8)
-  };
-
-  // Load color
-  if (k == -1) glColor3d(0.8, 0.8, 0.8);
-  else if (k == 0) RNLoadRgb(colors[0]);
-  else RNLoadRgb(colors[1 + (k % (ncolors-1))]);
+    RNLoadRgb(GetColor(k));
 }
 
 
@@ -840,9 +843,9 @@ DrawPolygon(RNFlags draw_flags) const
     else glEnable(GL_LIGHTING);
     R3LoadNormal(normal);
     GLUtesselator *tess = gluNewTess();
-    gluTessCallback(tess, GLU_TESS_BEGIN, (void (*)()) glBegin);
-    gluTessCallback(tess, GLU_TESS_VERTEX, (void (*)()) glVertex3dv);
-    gluTessCallback(tess, GLU_TESS_END, (void (*)()) glEnd);
+    gluTessCallback(tess, GLU_TESS_BEGIN, (void (__stdcall *)()) glBegin);
+    gluTessCallback(tess, GLU_TESS_VERTEX, (void (__stdcall*)()) glVertex3dv);
+    gluTessCallback(tess, GLU_TESS_END, (void (__stdcall*)()) glEnd);
     gluTessBeginPolygon(tess, NULL);
     gluTessBeginContour(tess);
     for (int i = 0; i < vertices.NEntries(); i++) {
@@ -1421,8 +1424,8 @@ MPHouse(const char *name, const char *label)
     scene(NULL),
     mesh(NULL),
     bbox(FLT_MAX, FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX),    
-    label((label) ? strdup(label) : NULL),
-    name((name) ? strdup(name) : NULL)    
+    label((label) ? _strdup(label) : NULL),
+    name((name) ? _strdup(name) : NULL)    
 {
   // Set RGBD configuration parameters
   rgbd.SetDatasetFormat("matterport");
@@ -2275,8 +2278,8 @@ ReadAsciiFile(const char *filename)
   }
 
   // Fill in house info
-  this->name = (strcmp(name_buffer, "-")) ? strdup(name_buffer) : NULL;
-  this->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+  this->name = (strcmp(name_buffer, "-")) ? _strdup(name_buffer) : NULL;
+  this->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
   this->bbox = box;
 
   // Read levels
@@ -2291,7 +2294,7 @@ ReadAsciiFile(const char *filename)
     if (strcmp(cmd, "L")) { fprintf(stderr, "Error reading level %d\n", i); return 0; }
     MPLevel *level = new MPLevel();
     level->position = position;
-    level->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+    level->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
     level->bbox = box;
     InsertLevel(level);
   }
@@ -2310,7 +2313,7 @@ ReadAsciiFile(const char *filename)
     if (strcmp(cmd, "R")) { fprintf(stderr, "Error reading region %d\n", i); return 0; }
     MPRegion *region = new MPRegion();
     region->position = position;
-    region->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+    region->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
     region->bbox = box;
     region->height = (height > 0) ? height : bbox.ZMax() - position.Z();
     InsertRegion(region);
@@ -2335,7 +2338,7 @@ ReadAsciiFile(const char *filename)
     if (strcmp(cmd, "P")) { fprintf(stderr, "Error reading portal %d\n", i); return 0; }
     MPPortal *portal = new MPPortal();
     portal->span.Reset(p0, p1);
-    portal->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+    portal->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
     InsertPortal(portal);
     if (region0_index >= 0) {
       MPRegion *region0 = regions.Kth(region0_index);
@@ -2362,7 +2365,7 @@ ReadAsciiFile(const char *filename)
     MPSurface *surface = new MPSurface();
     surface->position = position;
     surface->normal = normal;
-    surface->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+    surface->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
     surface->bbox = box;
     InsertSurface(surface);
     if (region_index >= 0) {
@@ -2384,7 +2387,7 @@ ReadAsciiFile(const char *filename)
     MPVertex *vertex = new MPVertex();
     vertex->position = position;
     vertex->normal = normal;
-    vertex->label = (strcmp(label_buffer, "-")) ? strdup(label_buffer) : NULL;
+    vertex->label = (strcmp(label_buffer, "-")) ? _strdup(label_buffer) : NULL;
     InsertVertex(vertex);
     if (surface_index >= 0) {
       MPSurface *surface = surfaces.Kth(surface_index);
@@ -2404,7 +2407,7 @@ ReadAsciiFile(const char *filename)
     if (strcmp(cmd, "P")) { fprintf(stderr, "Error reading panorama %d\n", i); return 0; }
     MPPanorama *panorama = new MPPanorama();
     panorama->position = position;
-    panorama->name = (strcmp(name_buffer, "-")) ? strdup(name_buffer) : NULL;
+    panorama->name = (strcmp(name_buffer, "-")) ? _strdup(name_buffer) : NULL;
     InsertPanorama(panorama);
     if (region_index >= 0) {
       MPRegion *region = regions.Kth(region_index);
@@ -2433,7 +2436,7 @@ ReadAsciiFile(const char *filename)
     sprintf(depth_filename, "%s_d%d_%d.png", name_buffer, camera_index, yaw_index);
     sprintf(color_filename, "%s_i%d_%d.jpg", name_buffer, camera_index, yaw_index);
     MPImage *image = new MPImage();
-    image->name = (strcmp(name_buffer, "-")) ? strdup(name_buffer) : NULL;
+    image->name = (strcmp(name_buffer, "-")) ? _strdup(name_buffer) : NULL;
     image->camera_index = camera_index;
     image->yaw_index = yaw_index;
     image->rgbd.SetNPixels(width, height);
@@ -2469,8 +2472,8 @@ ReadAsciiFile(const char *filename)
     MPCategory *category = new MPCategory();
     category->label_id = label_id;
     category->mpcat40_id = mpcat40_id;
-    if (strcmp(label_name, "-")) category->label_name = strdup(label_name);
-    if (strcmp(mpcat40_name, "-")) category->mpcat40_name = strdup(mpcat40_name);
+    if (strcmp(label_name, "-")) category->label_name = _strdup(label_name);
+    if (strcmp(mpcat40_name, "-")) category->mpcat40_name = _strdup(mpcat40_name);
     InsertCategory(category);
   }
     
@@ -2860,9 +2863,9 @@ ReadCategoryFile(const char *filename)
     // Create category
     MPCategory *category = new MPCategory();
     category->label_id = atoi(values[label_id_k]);
-    category->label_name = strdup(values[label_name_k]);
+    category->label_name = _strdup(values[label_name_k]);
     category->mpcat40_id = atoi(values[mpcat40_id_k]);
-    category->mpcat40_name = strdup(values[mpcat40_name_k]);
+    category->mpcat40_name = _strdup(values[mpcat40_name_k]);
 
     // Insert category
     InsertCategory(category);
@@ -3174,7 +3177,7 @@ ReadConfigurationFile(const char *filename)
     
     // Create image
     MPImage *img = new MPImage();
-    img->name = (name && strcmp(name, "-")) ? strdup(name) : NULL;
+    img->name = (name && strcmp(name, "-")) ? _strdup(name) : NULL;
     img->camera_index = (camera_index) ? atoi(camera_index) : -1;
     img->yaw_index = (yaw_index) ? atoi(yaw_index) : -1;
     img->extrinsics = image->CameraToWorld().Inverse().Matrix();
@@ -3215,7 +3218,7 @@ ReadConfigurationFile(const char *filename)
     else {
       // Create panorama and insert image
       panorama = new MPPanorama();
-      panorama->name = (name && strcmp(name, "-")) ? strdup(name) : NULL;
+      panorama->name = (name && strcmp(name, "-")) ? _strdup(name) : NULL;
       panorama->position = viewpoint;
       panorama->InsertImage(img);
       InsertPanorama(panorama);

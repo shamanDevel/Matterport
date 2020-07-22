@@ -80,10 +80,10 @@ RGBDCamera(const RGBDCamera& camera)
     k4_depth(camera.k4_depth),
     p1_depth(camera.p1_depth),
     p2_depth(camera.p2_depth),
-    deviceId((camera.deviceId) ? strdup(camera.deviceId) : NULL),
-    deviceName((camera.deviceName) ? strdup(camera.deviceName) : NULL),
-    sceneLabel((camera.sceneLabel) ? strdup(camera.sceneLabel) : NULL),
-    sceneType((camera.sceneType) ? strdup(camera.sceneType) : NULL),
+    deviceId((camera.deviceId) ? _strdup(camera.deviceId) : NULL),
+    deviceName((camera.deviceName) ? _strdup(camera.deviceName) : NULL),
+    sceneLabel((camera.sceneLabel) ? _strdup(camera.sceneLabel) : NULL),
+    sceneType((camera.sceneType) ? _strdup(camera.sceneType) : NULL),
     numDepthFrames(camera.numDepthFrames),      
     numColorFrames(camera.numColorFrames),      
     numIMUmeasurements(camera.numIMUmeasurements)
@@ -182,10 +182,10 @@ ReadScanNetFile(const char *filename)
     else if (!strcmp(key, "k2_color")) k2_color = atof(value); 
     else if (!strcmp(key, "k1_depth")) k1_depth = atof(value); 
     else if (!strcmp(key, "k2_depth")) k2_depth = atof(value); 
-    else if (!strcmp(key, "deviceId")) deviceId = strdup(value);
-    else if (!strcmp(key, "deviceName")) deviceName = strdup(value);        
-    else if (!strcmp(key, "sceneLabel")) sceneLabel = strdup(value);        
-    else if (!strcmp(key, "sceneType")) sceneType = strdup(value);         
+    else if (!strcmp(key, "deviceId")) deviceId = _strdup(value);
+    else if (!strcmp(key, "deviceName")) deviceName = _strdup(value);        
+    else if (!strcmp(key, "sceneLabel")) sceneLabel = _strdup(value);        
+    else if (!strcmp(key, "sceneType")) sceneType = _strdup(value);         
     else if (!strcmp(key, "numDepthFrames")) numDepthFrames = atoi(value);      
     else if (!strcmp(key, "numColorFrames")) numColorFrames = atoi(value);      
     else if (!strcmp(key, "numIMUmeasurements")) numIMUmeasurements = atoi(value);
