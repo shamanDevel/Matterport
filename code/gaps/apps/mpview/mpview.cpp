@@ -1391,7 +1391,7 @@ void batchWriteImages()
     int maxIndex = 0;
     std::map<int, CategoryData> indexToCategory;
     std::vector<CategoryData> categories;
-    indexToCategory[0] = CategoryData{ 0, {0,0,0}, "unlabelled" };
+    indexToCategory[0] = CategoryData{ 0, {0,0,0}, "unlabeled" };
     for (int i = 0; i < house->categories.NEntries(); ++i)
     {
         int index = house->categories[i]->mpcat40_id;
