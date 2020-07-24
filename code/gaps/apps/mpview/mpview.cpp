@@ -1556,11 +1556,72 @@ void batchWriteImages()
 // Write the category ids from "mesh" into the high-resolution mesh from "scene"
 // and save as ply
 ////////////////////////////////////////////////////////////////////////
-void convertSceneToMesh(const R3SceneNode* node, R3Mesh* mesh)
+template<typename T>
+std::tuple<T, T, T> sort3(T a, T b, T c)
+{
+    if (a < b && a < c) return { a, min(b, c), max(b, c) };
+    if (b < a && b < c) return { b, min(a, c), max(a, c) };
+    else return { c, min(a, b), max(a, b) };
+}
+namespace std { //https://stackoverflow.com/a/21439212/1786598
+    namespace
+    {
+
+        // Code from boost
+        // Reciprocal of the golden ratio helps spread entropy
+        //     and handles duplicates.
+        // See Mike Seymour in magic-numbers-in-boosthash-combine:
+        //     https://stackoverflow.com/questions/4948780
+
+        template <class T>
+        inline void hash_combine(std::size_t& seed, T const& v)
+        {
+            seed ^= hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+
+        // Recursive template code derived from Matthieu M.
+        template <class Tuple, size_t Index = std::tuple_size<Tuple>::value - 1>
+        struct HashValueImpl
+        {
+            static void apply(size_t& seed, Tuple const& tuple)
+            {
+                HashValueImpl<Tuple, Index - 1>::apply(seed, tuple);
+                hash_combine(seed, get<Index>(tuple));
+            }
+        };
+
+        template <class Tuple>
+        struct HashValueImpl<Tuple, 0>
+        {
+            static void apply(size_t& seed, Tuple const& tuple)
+            {
+                hash_combine(seed, get<0>(tuple));
+            }
+        };
+    }
+
+    template <typename ... TT>
+    struct hash<std::tuple<TT...>>
+    {
+        size_t
+            operator()(std::tuple<TT...> const& tt) const
+        {
+            size_t seed = 0;
+            HashValueImpl<std::tuple<TT...> >::apply(seed, tt);
+            return seed;
+        }
+
+    };
+}
+void convertSceneToMesh(
+    const R3SceneNode* node, R3Mesh* mesh,
+    std::unordered_map<std::tuple<float, float, float>, R3MeshVertex*>& position2Vertex,
+    std::unordered_map<std::tuple<size_t, size_t, size_t>, R3MeshFace*>& index2Face,
+    int& duplicateVertices, int& duplicateFaces)
 {
     //recurse into children
     for (int i = 0; i < node->NChildren(); ++i) {
-        convertSceneToMesh(node->Child(i), mesh);
+        convertSceneToMesh(node->Child(i), mesh, position2Vertex, index2Face, duplicateVertices, duplicateFaces);
     }
 
 	//loop over elements
@@ -1574,12 +1635,18 @@ void convertSceneToMesh(const R3SceneNode* node, R3Mesh* mesh)
             if (shape->ClassID() != R3TriangleArray::CLASS_ID())
                 continue;
             const R3TriangleArray* array = dynamic_cast<const R3TriangleArray*>(shape);
-            std::unordered_map<const R3TriangleVertex*, R3MeshVertex*> vertexOld2New;
 			for (int k=0; k<array->NVertices(); ++k)
 			{
                 const R3TriangleVertex* oldV = array->Vertex(k);
-                R3MeshVertex* newV = mesh->CreateVertex(oldV->Position(), oldV->Normal(), oldV->Color(), oldV->TextureCoords());
-                vertexOld2New.emplace(oldV, newV);
+                auto posKey = std::make_tuple(oldV->position.X(), oldV->position.Y(), oldV->position.Z());
+                if (position2Vertex.count(posKey) == 0) { //check for duplicate vertices
+                    R3MeshVertex* newV = mesh->CreateVertex(oldV->Position(), oldV->Normal(), oldV->Color(), oldV->TextureCoords());
+                    position2Vertex.emplace(posKey, newV);
+                }
+                else
+                {
+                    duplicateVertices++;
+                }
 			}
 			for (int k=0; k<array->NTriangles(); ++k)
 			{
@@ -1588,12 +1655,29 @@ void convertSceneToMesh(const R3SceneNode* node, R3Mesh* mesh)
                 bool found = true;
 				for (int l=0; l<3; ++l)
 				{
-                    const auto it = vertexOld2New.find(t->Vertex(l));
-                    if (it == vertexOld2New.end()) { found = false; break; }
+                    auto posKey = std::make_tuple(t->Vertex(l)->position.X(), t->Vertex(l)->position.Y(), t->Vertex(l)->position.Z());
+                    const auto it = position2Vertex.find(posKey);
+                    if (it == position2Vertex.end()) { found = false; break; }
                     v[l] = it->second;
 				}
-                if (found)
-                    mesh->CreateFace(v[0], v[1], v[2])->category = 0;
+                if (found) {
+                    auto indexKey = sort3(
+                        reinterpret_cast<size_t>(v[0]),
+                        reinterpret_cast<size_t>(v[1]),
+                        reinterpret_cast<size_t>(v[2]));
+                    if (index2Face.count(indexKey) == 0) {
+                        auto f = mesh->CreateFace(v[0], v[1], v[2]);
+                        if (f != nullptr) {
+                            f->category = 0;
+                            index2Face.emplace(indexKey, f);
+                        } else
+                            duplicateFaces++;
+                    }
+                    else
+                    {
+                        duplicateFaces++;
+                    }
+                }
                 else
                     printf("Unable to create triangle, no vertex found\n");
 			}
@@ -1639,11 +1723,18 @@ void matchMeshes()
 
 	//1. Convert house->scene from R3TriangleArray into R3Mesh
     R3Mesh mesh;
+    std::unordered_map<std::tuple<float, float, float>, R3MeshVertex*> position2Vertex;
+    std::unordered_map<std::tuple<size_t, size_t, size_t>, R3MeshFace*> index2Face;
+    int duplicateVertices = 0;
+    int duplicateFaces = 0;
 	for (int nodeID = 0; nodeID < house->scene->NNodes(); ++nodeID)
 	{
         R3SceneNode* node = house->scene->Node(nodeID);
-        convertSceneToMesh(node, &mesh);
+        convertSceneToMesh(node, &mesh, position2Vertex, index2Face, duplicateVertices, duplicateFaces);
 	}
+    printf("Output #vertices: %d, #faces: %d\n", mesh.NVertices(), mesh.NFaces());
+    printf("duplicate vertices removed: %d\n", duplicateVertices);
+    printf("duplicate faces removed: %d\n", duplicateFaces);
 	
 	//2. Copy category ids from the R3Mesh of house->mesh into the new R3Mesh
 #if 1
@@ -1678,8 +1769,9 @@ void matchMeshes()
         	{
                 triOut->category = house->mesh->Face(bestIndex)->category;
                 auto color = GetColor(triOut->category);
-                for (int l = 0; l < 3; ++l)
+                for (int l = 0; l < 3; ++l) {
                     triOut->vertex[l]->color = color;
+                }
         	}
         }
     }
