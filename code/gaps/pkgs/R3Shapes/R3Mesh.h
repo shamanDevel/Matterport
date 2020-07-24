@@ -28,7 +28,7 @@ class R3MeshVertex {
   public:
     R3MeshVertex(void);
     virtual ~R3MeshVertex(void);
-  protected:
+  public:
     RNArray<R3MeshEdge *> edges;
     R3Point position;
     R3Vector normal;
@@ -51,7 +51,7 @@ class R3MeshEdge {
   public:
     R3MeshEdge(void);
     virtual ~R3MeshEdge(void);
-  protected:
+  public:
     class R3MeshVertex *vertex[2];
     class R3MeshFace *face[2];
     RNLength length;
@@ -71,7 +71,7 @@ class R3MeshFace {
   public:
     R3MeshFace(void);
     virtual ~R3MeshFace(void);
-  protected:
+  public:
     class R3MeshVertex *vertex[3];
     class R3MeshEdge *edge[3];
     R3Plane plane;

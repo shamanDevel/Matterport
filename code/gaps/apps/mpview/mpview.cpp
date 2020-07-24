@@ -6,6 +6,8 @@
 // Include files 
 ////////////////////////////////////////////////////////////////////////
 
+#include <unordered_map>
+
 #include "R3Graphics/R3Graphics.h"
 #include "RGBD/RGBD.h"
 #include "fglut/fglut.h"
@@ -38,7 +40,7 @@ static RNBoolean initial_camera = FALSE;
 static RNRgb background(0,0,0);
 static int print_verbose = 0;
 static int batch = 0;
-
+static char* match_meshes = nullptr;
 
 // Application variables
 
@@ -998,6 +1000,7 @@ void GLUTSpecial(int key, int x, int y)
     if (house->images.NEntries() > 0) {
       if (++snap_image_index >= house->images.NEntries()) snap_image_index = house->images.NEntries()-1;
       SnapImage(house->images.Kth(snap_image_index));
+      printf("Image %d\n", snap_image_index);
     }
     break;
     
@@ -1005,6 +1008,7 @@ void GLUTSpecial(int key, int x, int y)
     if (house->images.NEntries() > 0) {
       if (--snap_image_index < 0) snap_image_index = 0;
       SnapImage(house->images.Kth(snap_image_index));
+      printf("Image %d\n", snap_image_index);
     }
     break;
     
@@ -1158,6 +1162,27 @@ void GLUTKeyboard(unsigned char key, int x, int y)
       color_scheme = MP_COLOR_BY_RGB;
     break;
 
+  case '1':
+      SnapImage(house->images.Kth(1));
+      printf("Jump to 1\n");
+      break;
+  case '2':
+      SnapImage(house->images.Kth(551));
+      printf("Jump to 551\n");
+      break;
+  case '3':
+      SnapImage(house->images.Kth(542));
+      printf("Jump to 542\n");
+      break;
+  case '4':
+      SnapImage(house->images.Kth(660));
+      printf("Jump to 660\n");
+      break;
+  case '5':
+      SnapImage(house->images.Kth(594));
+      printf("Jump to 594\n");
+      break;
+
   case 27: // ESC
     // Reset the selections and clipbox
     clip_box = house->bbox;
@@ -1283,6 +1308,7 @@ ParseArgs(int argc, char **argv)
       else if (!strcmp(*argv, "-input_objects")) { argc--; argv++; input_objects_filename = *argv; }
       else if (!strcmp(*argv, "-input_configuration")) { argc--; argv++; input_configuration_filename = *argv; input = TRUE; }
       else if (!strcmp(*argv, "-write_images")) { argc--; argv++; output_images_path = *argv; }
+      else if (!strcmp(*argv, "-match_meshes")) { argc--; argv++; match_meshes = *argv; }
       else if (!strcmp(*argv, "-background")) {
         argv++; argc--; background[0] = atof(*argv);
         argv++; argc--; background[1] = atof(*argv);
@@ -1525,6 +1551,146 @@ void batchWriteImages()
 }
 
 
+////////////////////////////////////////////////////////////////////////
+// Match "scene" and "mesh" meshes.
+// Write the category ids from "mesh" into the high-resolution mesh from "scene"
+// and save as ply
+////////////////////////////////////////////////////////////////////////
+void convertSceneToMesh(const R3SceneNode* node, R3Mesh* mesh)
+{
+    //recurse into children
+    for (int i = 0; i < node->NChildren(); ++i) {
+        convertSceneToMesh(node->Child(i), mesh);
+    }
+
+	//loop over elements
+	for (int i=0; i<node->NElements(); ++i)
+	{
+		//loop over shapes
+		for (int j=0; j<node->Element(i)->NShapes(); ++j)
+		{
+            const R3Shape* shape = node->Element(i)->Shape(j);
+			//check if this shape is a triangle array
+            if (shape->ClassID() != R3TriangleArray::CLASS_ID())
+                continue;
+            const R3TriangleArray* array = dynamic_cast<const R3TriangleArray*>(shape);
+            std::unordered_map<const R3TriangleVertex*, R3MeshVertex*> vertexOld2New;
+			for (int k=0; k<array->NVertices(); ++k)
+			{
+                const R3TriangleVertex* oldV = array->Vertex(k);
+                R3MeshVertex* newV = mesh->CreateVertex(oldV->Position(), oldV->Normal(), oldV->Color(), oldV->TextureCoords());
+                vertexOld2New.emplace(oldV, newV);
+			}
+			for (int k=0; k<array->NTriangles(); ++k)
+			{
+                const R3Triangle* t = array->Triangle(k);
+                R3MeshVertex* v[3];
+                bool found = true;
+				for (int l=0; l<3; ++l)
+				{
+                    const auto it = vertexOld2New.find(t->Vertex(l));
+                    if (it == vertexOld2New.end()) { found = false; break; }
+                    v[l] = it->second;
+				}
+                if (found)
+                    mesh->CreateFace(v[0], v[1], v[2])->category = 0;
+                else
+                    printf("Unable to create triangle, no vertex found\n");
+			}
+		}
+	}
+}
+float sqr(float x) {return x * x; };
+float distSqr(const R3Point& a, const R3Point& b)
+{
+    return sqr(a.X() - b.X()) + sqr(a.Y() - b.Y()) + sqr(a.Z() - b.Z());
+};
+float triDistanceSqr(const R3MeshFace* in, const R3MeshFace* out)
+{
+    float dist = 0;
+	for (int i=0; i<3; ++i)
+	{
+        float d = FLT_MAX;
+        for (int j = 0; j < 3; ++j)
+            d = min(d, distSqr(in->vertex[i]->position, out->vertex[j]->position));
+        dist = max(dist, d);
+	}
+    return dist;
+}
+float triSizeSqr(const R3MeshFace* a)
+{
+    return distSqr(a->vertex[0]->position, a->vertex[1]->position)
+		+ distSqr(a->vertex[2]->position, a->vertex[1]->position)
+		+ distSqr(a->vertex[0]->position, a->vertex[2]->position);
+}
+void matchMeshes()
+{
+    printf("Match textured mesh 'scene' and segmented mesh 'mesh'\n");
+	if (!house->mesh && !house->scene)
+	{
+        printf("No mesh or no scene loaded, can't continue\n");
+        return;
+	}
+	if (!match_meshes || strlen(match_meshes)==0)
+	{
+        printf("No output file specified\n");
+        return;
+	}
+
+	//1. Convert house->scene from R3TriangleArray into R3Mesh
+    R3Mesh mesh;
+	for (int nodeID = 0; nodeID < house->scene->NNodes(); ++nodeID)
+	{
+        R3SceneNode* node = house->scene->Node(nodeID);
+        convertSceneToMesh(node, &mesh);
+	}
+	
+	//2. Copy category ids from the R3Mesh of house->mesh into the new R3Mesh
+#if 1
+    printf("Match and copy categories\n");
+    int numTrisTarget = mesh.NFaces();
+    int numTrisSource = house->mesh->NFaces();
+    static const int batchSize = 32;
+    for (int i1 = 0; i1 < numTrisTarget; i1 += batchSize)
+    {
+        printf("\r%7d / %7d", i1, numTrisTarget);
+        fflush(stdout);
+        const int end = min(numTrisTarget, i1 + batchSize);
+#pragma omp parallel for
+        for (int i = i1; i < end; ++i)
+        {
+            R3MeshFace* triOut = mesh.Face(i);
+            //search for the triangle with the smallest distance
+            float distance = FLT_MAX;
+            int bestIndex = -1;
+        	for (int j=0; j<numTrisSource; ++j)
+        	{
+                const R3MeshFace* triIn = house->mesh->Face(j);
+                float dist = triDistanceSqr(triOut, triIn);
+        		if (dist < distance)
+        		{
+                    bestIndex = j;
+                    distance = dist;
+        		}
+        	}
+            const static float EPSILON = 5;
+        	if (distance <= EPSILON * triSizeSqr(triOut))
+        	{
+                triOut->category = house->mesh->Face(bestIndex)->category;
+                auto color = GetColor(triOut->category);
+                for (int l = 0; l < 3; ++l)
+                    triOut->vertex[l]->color = color;
+        	}
+        }
+    }
+    printf("\n");
+#endif
+	
+	//3. Save new mesh as .ply
+    if (mesh.WritePlyFile(match_meshes, false) == 0)
+        printf("Failed to write mesh\n");
+    printf("Done\n");
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Main function
@@ -1548,12 +1714,12 @@ int main(int argc, char **argv)
   }
 
   // Read scene
-  if (input_scene_filename) {
+  if (input_scene_filename) { //textured mesh
     if (!ReadScene(input_scene_filename)) exit(-1);
   }
 
   // Read mesh
-  if (input_mesh_filename) {
+  if (input_mesh_filename) {  //segmented mesh
     if (!ReadMesh(input_mesh_filename)) exit(-1);
   }
 
@@ -1582,10 +1748,16 @@ int main(int argc, char **argv)
     if (!WriteHouse(output_house_filename)) exit(-1);
   }
 
+  if (match_meshes)
+  {
+      matchMeshes();
+      return 0;
+  }
   if (output_images_path)
   {
     GLUTInit(&argc, argv);
     batchWriteImages();
+    return 0;
   }
 	
   // Check if should start interactive viewer
