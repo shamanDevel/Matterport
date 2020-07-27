@@ -13,11 +13,18 @@
 #include "RGBD/RGBD.h"
 #include "mp.h"
 
-
-
 ////////////////////////////////////////////////////////////////////////
 // UTILITY DRAWING FUNCTIONS
 ////////////////////////////////////////////////////////////////////////
+
+bool MP_USE_LIGHTING = true;
+static void EnableLighting()
+{
+    if (MP_USE_LIGHTING)
+        glEnable(GL_LIGHTING);
+    else
+        glDisable(GL_LIGHTING);
+}
 
 static void 
 DrawText(const R3Point& p, const char *s)
@@ -221,7 +228,7 @@ void MPImage::
 DrawQuads(RNFlags draw_flags) const
 {
   // Draw points
-  glEnable(GL_LIGHTING);
+  EnableLighting();
   rgbd.DrawQuads(RGBD_RENDER_COLOR_SCHEME);
 }
 
@@ -322,7 +329,7 @@ DrawPosition(RNFlags draw_flags) const
 {
   // Draw sphere at position
   if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-  else glEnable(GL_LIGHTING);
+  else EnableLighting();
   R3Sphere(position, 0.2).Draw();
 }
 
@@ -418,7 +425,7 @@ DrawMesh(RNFlags draw_flags) const
   // Draw faces
   if (draw_flags & MP_DRAW_FACES) {
     if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-    else glEnable(GL_LIGHTING);
+    else EnableLighting();
     glBegin(GL_TRIANGLES);
     for (int i = 0; i < faces.NEntries(); i++) {
       R3MeshFace *face = faces.Kth(i);
@@ -714,7 +721,7 @@ DrawPosition(RNFlags draw_flags) const
 {
   // Draw sphere at position
   if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-  else glEnable(GL_LIGHTING);
+  else EnableLighting();
   R3Sphere(position, 0.1).Draw();
 }
 
@@ -840,7 +847,7 @@ DrawPolygon(RNFlags draw_flags) const
   // Draw faces
   if (draw_flags & MP_DRAW_FACES) {
     if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-    else glEnable(GL_LIGHTING);
+    else EnableLighting();
     R3LoadNormal(normal);
     GLUtesselator *tess = gluNewTess();
     gluTessCallback(tess, GLU_TESS_BEGIN, (void (__stdcall *)()) glBegin);
@@ -1109,7 +1116,7 @@ DrawPosition(RNFlags draw_flags) const
 {
   // Draw a sphere at position
   if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-  else glEnable(GL_LIGHTING);
+  else EnableLighting();
   R3Sphere(position, 0.2).Draw(R3_SURFACES_DRAW_FLAG);
 }
 
@@ -1373,7 +1380,7 @@ DrawPosition(RNFlags draw_flags) const
   // Draw a sphere at position
   if (draw_flags[MP_DRAW_DEPICTIONS]) {
     if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-    else glEnable(GL_LIGHTING);
+    else EnableLighting();
     R3Sphere(position, 0.2).Draw(R3_SURFACES_DRAW_FLAG);
   }
 }
@@ -2046,7 +2053,7 @@ DrawMesh(RNFlags draw_flags) const
     }
     else if (draw_flags[MP_COLOR_BY_LABEL]) {
       if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-      else glEnable(GL_LIGHTING);
+      else EnableLighting();
       glBegin(GL_TRIANGLES);
       for (int i = 0; i < mesh->NFaces(); i++) {
         R3MeshFace *face = mesh->Face(i);
@@ -2062,7 +2069,7 @@ DrawMesh(RNFlags draw_flags) const
     }
     else if (draw_flags[MP_COLOR_BY_INDEX]) {
       if (draw_flags & MP_COLOR_FOR_PICK) glDisable(GL_LIGHTING);
-      else glEnable(GL_LIGHTING);
+      else EnableLighting();
       glBegin(GL_TRIANGLES);
       for (int i = 0; i < mesh->NFaces(); i++) {
         R3MeshFace *face = mesh->Face(i);
@@ -2166,7 +2173,7 @@ DrawScene(RNFlags draw_flags) const
 
   // Draw faces
   if (draw_flags[MP_DRAW_FACES]) {
-    glEnable(GL_LIGHTING);
+    EnableLighting();
     glColor3d(1.0, 1.0, 1.0); 
     scene->Draw(R3_DEFAULT_DRAW_FLAGS);
   }

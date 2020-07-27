@@ -10,7 +10,7 @@
 
 #define MP_DEFAULT_DRAW_FLAGS 0xFFFFFFFF
 
-
+extern bool MP_USE_LIGHTING;
 RNRgb GetColor(int k);
 
 ////////////////////////////////////////////////////////////////////////

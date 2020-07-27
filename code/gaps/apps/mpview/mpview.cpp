@@ -1142,9 +1142,10 @@ void GLUTKeyboard(unsigned char key, int x, int y)
 
   case 'Q':
   case 'q':
-      region_draw_flags.XOR(MP_COLOR_FOR_PICK);
-      object_draw_flags.XOR(MP_COLOR_FOR_PICK);
-      mesh_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      //region_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      //object_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      //mesh_draw_flags.XOR(MP_COLOR_FOR_PICK);
+      MP_USE_LIGHTING = !MP_USE_LIGHTING;
       break;
 
   case ' ':
@@ -1396,9 +1397,10 @@ void batchWriteImages()
 	
     //prepare settings
     color_scheme = MP_COLOR_BY_OBJECT | MP_COLOR_BY_LABEL;
-    region_draw_flags.Add(MP_COLOR_FOR_PICK);
-    object_draw_flags.Add(MP_COLOR_FOR_PICK);
-    mesh_draw_flags.Add(MP_COLOR_FOR_PICK);
+    region_draw_flags.Reset(0);
+    object_draw_flags.Reset(0);
+    mesh_draw_flags.Reset(0);
+    MP_USE_LIGHTING = false;
     show_clip_box = false;
     show_axes = false;
 
@@ -1434,6 +1436,11 @@ void batchWriteImages()
     sprintf_s(&output_filename[0], output_filename.size(),
         "%scategories.tsv", output_path.c_str());
     FILE* cat_file = fopen(output_filename.data(), "w");
+	if (cat_file == nullptr)
+	{
+        printf("Unable to write category file! Does the output folder exist?\n");
+        return;
+	}
     fprintf(cat_file, "Index\tcat40-name\tcolor\n");
     for (int i = 0; i <= maxIndex; ++i) {
         const auto& d = indexToCategory[i];
@@ -1471,9 +1478,9 @@ void batchWriteImages()
         scene_draw_flags.Remove(MP_SHOW_SCENE);
 
 		//render segmentation
-        region_draw_flags.Add(MP_DRAW_FACES);
-        object_draw_flags.Add(MP_DRAW_FACES);
-        mesh_draw_flags.Add(MP_DRAW_FACES);
+        mesh_draw_flags.Add(MP_SHOW_MESH | MP_DRAW_FACES);
+        region_draw_flags.Add(MP_SHOW_REGIONS | MP_DRAW_FACES);
+        object_draw_flags.Add(MP_SHOW_OBJECTS | MP_DRAW_FACES);
 
         Draw();
         image.Capture();
@@ -1543,9 +1550,9 @@ void batchWriteImages()
         }
 #endif
 		
-        region_draw_flags.Remove(MP_DRAW_FACES);
-        object_draw_flags.Remove(MP_DRAW_FACES);
-        mesh_draw_flags.Remove(MP_DRAW_FACES);
+        region_draw_flags.Reset(0);
+        object_draw_flags.Reset(0);
+        mesh_draw_flags.Reset(0);
 	}
     printf("\n");
 }
