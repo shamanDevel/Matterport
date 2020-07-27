@@ -1,23 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LocalDebuggerCommandArguments> -input_house .\house_segmentations\XcA2TqTSSAj.house -input_mesh .\house_segmentations\XcA2TqTSSAj.ply -input_scene .\matterport_mesh\a74d64d3f8d94500816467e5d936db10\a74d64d3f8d94500816467e5d936db10.obj -write_images ..\..\processed\XcA2TqTSSAj\ -v</LocalDebuggerCommandArguments>
-    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\XcA2TqTSSAj</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>-input_house .\house_segmentations\D7G3Y4RVNrH.house -input_mesh .\house_segmentations\D7G3Y4RVNrH.ply -input_scene .\matterport_mesh\0b414c5246f64cc3a1f71251e28eb07d\0b414c5246f64cc3a1f71251e28eb07d.obj -write_images ..\..\processed\D7G3Y4RVNrH-orig2\ -v</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\D7G3Y4RVNrH</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerCommandArguments> -input_house .\house_segmentations\XcA2TqTSSAj.house -input_mesh .\house_segmentations\XcA2TqTSSAj.ply -input_scene .\matterport_mesh\a74d64d3f8d94500816467e5d936db10\a74d64d3f8d94500816467e5d936db10.obj -write_images ..\..\processed\XcA2TqTSSAj\ -v</LocalDebuggerCommandArguments>
-    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\XcA2TqTSSAj</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>-input_house .\house_segmentations\D7G3Y4RVNrH.house -input_mesh .\house_segmentations\D7G3Y4RVNrH.ply -input_scene .\matterport_mesh\0b414c5246f64cc3a1f71251e28eb07d\0b414c5246f64cc3a1f71251e28eb07d.obj -write_images ..\..\processed\D7G3Y4RVNrH-orig2\ -v</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\D7G3Y4RVNrH</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments> -input_house .\house_segmentations\XcA2TqTSSAj.house -input_mesh .\house_segmentations\XcA2TqTSSAj.ply -input_scene .\matterport_mesh\a74d64d3f8d94500816467e5d936db10\a74d64d3f8d94500816467e5d936db10.obj -write_images ..\..\processed\XcA2TqTSSAj\ -v</LocalDebuggerCommandArguments>
-    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\XcA2TqTSSAj</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>-input_house .\house_segmentations\D7G3Y4RVNrH.house -input_mesh .\house_segmentations\D7G3Y4RVNrH.ply -input_scene .\matterport_mesh\0b414c5246f64cc3a1f71251e28eb07d\0b414c5246f64cc3a1f71251e28eb07d.obj -write_images ..\..\processed\D7G3Y4RVNrH-orig2\ -v</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\D7G3Y4RVNrH</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments> -input_house .\house_segmentations\XcA2TqTSSAj.house -input_mesh .\house_segmentations\XcA2TqTSSAj.ply -input_scene .\matterport_mesh\a74d64d3f8d94500816467e5d936db10\a74d64d3f8d94500816467e5d936db10.obj -write_images ..\..\processed\XcA2TqTSSAj\ -v</LocalDebuggerCommandArguments>
-    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\XcA2TqTSSAj</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>-input_house .\house_segmentations\D7G3Y4RVNrH.house -input_mesh .\house_segmentations\D7G3Y4RVNrH.ply -input_scene .\matterport_mesh\0b414c5246f64cc3a1f71251e28eb07d\0b414c5246f64cc3a1f71251e28eb07d.obj -write_images ..\..\processed\D7G3Y4RVNrH-orig2\ -v</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>E:\Datasets\Matterport\v1\scans\D7G3Y4RVNrH</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

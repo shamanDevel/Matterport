@@ -738,11 +738,11 @@ void GLUTStop(void)
 
 
 
-void Draw(void)
+void Draw(GLbitfield clearFlags = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 {
     // Clear window 
     glClearColor(background.R(), background.G(), background.B(), 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(clearFlags);
 
     // Set backface culling
     if (show_backfacing) glDisable(GL_CULL_FACE);
@@ -1397,6 +1397,9 @@ void batchWriteImages()
 	
     //prepare settings
     color_scheme = MP_COLOR_BY_OBJECT | MP_COLOR_BY_LABEL;
+    const auto old_region_draw_flags = static_cast<unsigned long>(region_draw_flags);
+    const auto old_object_draw_flags = static_cast<unsigned long>(object_draw_flags);
+    const auto old_mesh_draw_flags = static_cast<unsigned long>(mesh_draw_flags);
     region_draw_flags.Reset(0);
     object_draw_flags.Reset(0);
     mesh_draw_flags.Reset(0);
@@ -1478,15 +1481,18 @@ void batchWriteImages()
         scene_draw_flags.Remove(MP_SHOW_SCENE);
 
 		//render segmentation
-        mesh_draw_flags.Add(MP_SHOW_MESH | MP_DRAW_FACES);
-        region_draw_flags.Add(MP_SHOW_REGIONS | MP_DRAW_FACES);
-        object_draw_flags.Add(MP_SHOW_OBJECTS | MP_DRAW_FACES);
-
-        Draw();
+        object_draw_flags.Reset(old_object_draw_flags);
+        object_draw_flags.Add(MP_SHOW_OBJECTS | MP_DRAW_FACES); // | MP_DRAW_FACES);
+        //region_draw_flags.Add(MP_SHOW_REGIONS | MP_DRAW_FACES | MP_DRAW_DEPICTIONS);
+        //object_draw_flags.Add(MP_SHOW_OBJECTS | MP_DRAW_FACES);
+        glPolygonOffset(-2.0f, -5);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        Draw(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_POLYGON_OFFSET_FILL);
         image.Capture();
         sprintf_s(&output_filename[0], output_filename.size(),
             "%sclasses_%05d.png", output_path.c_str(), snap_image_index);
-#if 0 // no palette
+#if 1 // no palette
         image.Write(output_filename.data());
 #else // with palette
         {
