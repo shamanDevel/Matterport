@@ -1492,7 +1492,7 @@ void batchWriteImages()
         image.Capture();
         sprintf_s(&output_filename[0], output_filename.size(),
             "%sclasses_%05d.png", output_path.c_str(), snap_image_index);
-#if 1 // no palette
+#if 0 // no palette
         image.Write(output_filename.data());
 #else // with palette
         {
